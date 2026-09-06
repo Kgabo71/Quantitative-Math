@@ -74,7 +74,7 @@ export const AiTutorView: React.FC<AiTutorViewProps> = ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: textToSend,
-          context: `User completed lessons: ${user.completedLessons.join(', ')}. User XP: ${user.xpPoints}. User Level: ${user.level}.`,
+          context: `User completed lessons: ${(user.completedLessons || []).join(', ')}. User XP: ${user.xpPoints || 0}. User Level: ${user.level || 'INTERMEDIATE'}.`,
           userLevel: user.level,
         }),
       });

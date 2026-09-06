@@ -75,7 +75,7 @@ export const TradeTrackerView: React.FC<TradeTrackerViewProps> = ({
   const handleExportCsv = () => {
     const headers = 'ID,Symbol,Side,OrderType,Price,Amount,TotalUSD,Status,PnL,StrategyTag,Notes,CreatedAt\n';
     const rows = trades.map(t => 
-      `"${t.id}","${t.symbol}","${t.side}","${t.orderType}",${t.price},${t.amount},${t.totalUsd},"${t.status}",${t.pnl || 0},"${t.strategyTag}","${t.notes.replace(/"/g, '""')}","${new Date(t.createdAt).toISOString()}"`
+      `"${t.id}","${t.symbol}","${t.side}","${t.orderType}",${t.price},${t.amount},${t.totalUsd},"${t.status}",${t.pnl || 0},"${t.strategyTag}","${(t.notes || '').replace(/"/g, '""')}","${new Date(t.createdAt).toISOString()}"`
     ).join('\n');
 
     const blob = new Blob([headers + rows], { type: 'text/csv' });

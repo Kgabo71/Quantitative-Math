@@ -36,9 +36,14 @@ export const VolatilityAlertsView: React.FC<VolatilityAlertsViewProps> = ({
   const [symbol, setSymbol] = useState<string>('BTC/USDT');
   const [type, setType] = useState<VolatilityAlert['type']>('VOLATILITY_SPIKE');
   const [threshold, setThreshold] = useState<number>(3.5);
-  const [pushPermission, setPushPermission] = useState<NotificationPermission>(
-    typeof Notification !== 'undefined' ? Notification.permission : 'default'
-  );
+  const [pushPermission, setPushPermission] = useState<NotificationPermission>(() => {
+    try {
+      if (typeof window !== 'undefined' && 'Notification' in window) {
+        return Notification.permission;
+      }
+    } catch (e) {}
+    return 'default';
+  });
   const [testNotificationSent, setTestNotificationSent] = useState<boolean>(false);
 
   // Request Push Notification Permission

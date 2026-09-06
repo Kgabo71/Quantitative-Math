@@ -21,13 +21,13 @@ interface NavbarProps {
   tickers: MarketTicker[];
   isDark: boolean;
   onToggleTheme: () => void;
-  soundEnabled: boolean;
-  onToggleSound: () => void;
-  isMobileFrame: boolean;
-  onToggleMobileFrame: () => void;
+  soundEnabled?: boolean;
+  onToggleSound?: () => void;
+  isMobileFrame?: boolean;
+  onToggleMobileFrame?: () => void;
   onOpenAuth: () => void;
-  onOpenAlerts: () => void;
-  unreadAlertsCount: number;
+  onOpenAlerts?: () => void;
+  unreadAlertsCount?: number;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -35,15 +35,21 @@ export const Navbar: React.FC<NavbarProps> = ({
   tickers,
   isDark,
   onToggleTheme,
-  soundEnabled,
-  onToggleSound,
-  isMobileFrame,
-  onToggleMobileFrame,
+  soundEnabled = true,
+  onToggleSound = () => {},
+  isMobileFrame = false,
+  onToggleMobileFrame = () => {},
   onOpenAuth,
-  onOpenAlerts,
-  unreadAlertsCount,
+  onOpenAlerts = () => {},
+  unreadAlertsCount = 0,
 }) => {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+
+  const displayName = user.name || user.username || 'Dr. Evelyn Vance';
+  const displayInitial = (displayName.trim().charAt(0) || 'E').toUpperCase();
+  const streak = user.streakDays ?? 4;
+  const balance = (user.balanceUsd ?? 100000).toLocaleString();
+  const xp = user.xpPoints ?? 350;
 
   return (
     <header className={`border-b transition-colors duration-200 sticky top-0 z-40 ${
@@ -109,12 +115,12 @@ export const Navbar: React.FC<NavbarProps> = ({
           }`}>
             <div className="flex items-center gap-1 text-amber-400 font-semibold" title="Learning XP">
               <Zap className="h-3.5 w-3.5 fill-amber-400" />
-              <span>{user.xpPoints} XP</span>
+              <span>{xp} XP</span>
             </div>
             <div className="h-3 w-px bg-slate-700" />
             <div className="flex items-center gap-1 text-orange-400 font-semibold" title="Daily Streak">
               <Award className="h-3.5 w-3.5" />
-              <span>{user.streakDays}d streak</span>
+              <span>{streak}d streak</span>
             </div>
           </div>
 
@@ -186,11 +192,11 @@ export const Navbar: React.FC<NavbarProps> = ({
               }`}
             >
               <div className="h-6 w-6 rounded-full bg-cyan-600 text-white flex items-center justify-center text-xs font-bold">
-                {user.username.charAt(0).toUpperCase()}
+                {displayInitial}
               </div>
               <div className="text-left hidden sm:block">
-                <div className="font-semibold text-slate-200 leading-tight">{user.username}</div>
-                <div className="text-[10px] text-cyan-400 font-mono">${user.balanceUsd.toLocaleString()}</div>
+                <div className="font-semibold text-slate-200 leading-tight">{displayName}</div>
+                <div className="text-[10px] text-cyan-400 font-mono">${balance}</div>
               </div>
             </button>
           </div>

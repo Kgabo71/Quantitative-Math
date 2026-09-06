@@ -9,6 +9,7 @@ import { TradeTrackerView } from './components/tracker/TradeTrackerView';
 import { AiTutorView } from './components/tutor/AiTutorView';
 import { VolatilityAlertsView } from './components/alerts/VolatilityAlertsView';
 import { AuthModal } from './components/auth/AuthModal';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { 
   MarketTicker, 
   UserProfile, 
@@ -18,29 +19,104 @@ import {
 } from './types';
 import { Smartphone, Monitor } from 'lucide-react';
 
+const DEFAULT_USER: UserProfile = {
+  id: 'usr-1',
+  name: 'Dr. Evelyn Vance',
+  username: 'evelyn_quant',
+  email: 'evelyn.vance@quantedge.ai',
+  role: 'Senior Algorithmic Trader',
+  balanceUsd: 100000,
+  marginUsedUsd: 15000,
+  maxDailyLossLimitUsd: 5000,
+  maxPositionSizeUsd: 25000,
+  xpPoints: 350,
+  streakDays: 4,
+  level: 'INTERMEDIATE',
+  riskTolerance: 'MODERATE',
+  completedLessons: ['stat-arb-pairs-1', 'black-scholes-greeks-1'],
+  bookmarkedLessons: [],
+  watchlist: ['BTC/USDT', 'NVDA', 'SPY'],
+  soundEnabled: true,
+  pushNotificationsEnabled: true,
+};
+
+const DEFAULT_TRADES: TradeRecord[] = [
+  {
+    id: 'tr-1',
+    symbol: 'BTC/USDT',
+    side: 'BUY',
+    orderType: 'MARKET',
+    price: 67200,
+    amount: 0.85,
+    totalUsd: 57120,
+    status: 'OPEN',
+    strategyTag: 'StatArb Pairs',
+    notes: 'Co-integrated spread breached 2.2 sigma standard deviation.',
+    createdAt: Date.now() - 3600000 * 5,
+  },
+  {
+    id: 'tr-2',
+    symbol: 'NVDA',
+    side: 'BUY',
+    orderType: 'LIMIT',
+    price: 122.50,
+    amount: 150,
+    totalUsd: 18375,
+    status: 'OPEN',
+    strategyTag: 'Trend Following',
+    notes: 'Dual EMA 12/50 golden cross confirmation with ATR filter.',
+    createdAt: Date.now() - 3600000 * 12,
+  },
+  {
+    id: 'tr-3',
+    symbol: 'ETH/USDT',
+    side: 'SELL',
+    orderType: 'MARKET',
+    price: 3620,
+    amount: 4.0,
+    totalUsd: 14480,
+    status: 'CLOSED',
+    pnl: 320,
+    strategyTag: 'Options Gamma',
+    notes: 'Delta neutral hedge rebalance after local variance surge.',
+    createdAt: Date.now() - 3600000 * 24,
+  }
+];
+
+const DEFAULT_ALERTS: VolatilityAlert[] = [
+  { id: 'al-1', symbol: 'BTC/USDT', type: 'VOLATILITY_SPIKE', threshold: 3.5, enabled: true, pushNotification: true, soundAlert: true, createdAt: Date.now() },
+  { id: 'al-2', symbol: 'NVDA', type: 'PRICE_ABOVE', threshold: 135.0, enabled: true, pushNotification: true, soundAlert: false, createdAt: Date.now() },
+  { id: 'al-3', symbol: 'SPY', type: 'DRAWDOWN_LIMIT', threshold: 2.0, enabled: true, pushNotification: true, soundAlert: true, createdAt: Date.now() },
+];
+
 export function App() {
   const [isDark, setIsDark] = useState<boolean>(true);
   const [activeTab, setActiveTab] = useState<TabType>('academy');
   const [isAuthOpen, setIsAuthOpen] = useState<boolean>(false);
   const [isMobileFrame, setIsMobileFrame] = useState<boolean>(false);
+  const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
   const [tutorPrefillTopic, setTutorPrefillTopic] = useState<string>('');
 
-  // User Profile
+  // User Profile with safe default merge
   const [user, setUser] = useState<UserProfile>(() => {
-    const saved = localStorage.getItem('quantedge_user');
-    if (saved) {
-      try { return JSON.parse(saved); } catch (e) {}
+    try {
+      const saved = localStorage.getItem('quantedge_user');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed === 'object') {
+          return {
+            ...DEFAULT_USER,
+            ...parsed,
+            completedLessons: Array.isArray(parsed.completedLessons) ? parsed.completedLessons : DEFAULT_USER.completedLessons,
+            watchlist: Array.isArray(parsed.watchlist) ? parsed.watchlist : DEFAULT_USER.watchlist,
+            bookmarkedLessons: Array.isArray(parsed.bookmarkedLessons) ? parsed.bookmarkedLessons : DEFAULT_USER.bookmarkedLessons,
+          };
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to parse saved user', e);
     }
-    return {
-      id: 'usr-1',
-      name: 'Dr. Evelyn Vance',
-      email: 'evelyn.vance@quantedge.ai',
-      balanceUsd: 100000,
-      riskTolerance: 'MODERATE',
-      completedLessons: ['stat-arb-pairs-1', 'black-scholes-greeks-1'],
-      xpPoints: 350,
-      level: 'INTERMEDIATE',
-    };
+    return DEFAULT_USER;
   });
 
   // Real-time market tickers
@@ -55,78 +131,45 @@ export function App() {
 
   // Paper Trades Journal
   const [trades, setTrades] = useState<TradeRecord[]>(() => {
-    const saved = localStorage.getItem('quantedge_trades');
-    if (saved) {
-      try { return JSON.parse(saved); } catch (e) {}
-    }
-    return [
-      {
-        id: 'tr-1',
-        symbol: 'BTC/USDT',
-        side: 'BUY',
-        orderType: 'MARKET',
-        price: 67200,
-        amount: 0.85,
-        totalUsd: 57120,
-        status: 'OPEN',
-        strategyTag: 'StatArb Pairs',
-        notes: 'Co-integrated spread breached 2.2 sigma standard deviation.',
-        createdAt: Date.now() - 3600000 * 5,
-      },
-      {
-        id: 'tr-2',
-        symbol: 'NVDA',
-        side: 'BUY',
-        orderType: 'LIMIT',
-        price: 122.50,
-        amount: 150,
-        totalUsd: 18375,
-        status: 'OPEN',
-        strategyTag: 'Trend Following',
-        notes: 'Dual EMA 12/50 golden cross confirmation with ATR filter.',
-        createdAt: Date.now() - 3600000 * 12,
-      },
-      {
-        id: 'tr-3',
-        symbol: 'ETH/USDT',
-        side: 'SELL',
-        orderType: 'MARKET',
-        price: 3620,
-        amount: 4.0,
-        totalUsd: 14480,
-        status: 'CLOSED',
-        pnl: 320,
-        strategyTag: 'Options Gamma',
-        notes: 'Delta neutral hedge rebalance after local variance surge.',
-        createdAt: Date.now() - 3600000 * 24,
+    try {
+      const saved = localStorage.getItem('quantedge_trades');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       }
-    ];
+    } catch (e) {}
+    return DEFAULT_TRADES;
   });
 
   // Volatility Alerts
   const [alerts, setAlerts] = useState<VolatilityAlert[]>(() => {
-    const saved = localStorage.getItem('quantedge_alerts');
-    if (saved) {
-      try { return JSON.parse(saved); } catch (e) {}
-    }
-    return [
-      { id: 'al-1', symbol: 'BTC/USDT', type: 'VOLATILITY_SPIKE', threshold: 3.5, enabled: true, pushNotification: true, soundAlert: true, createdAt: Date.now() },
-      { id: 'al-2', symbol: 'NVDA', type: 'PRICE_ABOVE', threshold: 135.0, enabled: true, pushNotification: true, soundAlert: false, createdAt: Date.now() },
-      { id: 'al-3', symbol: 'SPY', type: 'DRAWDOWN_LIMIT', threshold: 2.0, enabled: true, pushNotification: true, soundAlert: true, createdAt: Date.now() },
-    ];
+    try {
+      const saved = localStorage.getItem('quantedge_alerts');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {}
+    return DEFAULT_ALERTS;
   });
 
   // Sync state to local storage
   useEffect(() => {
-    localStorage.setItem('quantedge_user', JSON.stringify(user));
+    try {
+      localStorage.setItem('quantedge_user', JSON.stringify(user));
+    } catch (e) {}
   }, [user]);
 
   useEffect(() => {
-    localStorage.setItem('quantedge_trades', JSON.stringify(trades));
+    try {
+      localStorage.setItem('quantedge_trades', JSON.stringify(trades));
+    } catch (e) {}
   }, [trades]);
 
   useEffect(() => {
-    localStorage.setItem('quantedge_alerts', JSON.stringify(alerts));
+    try {
+      localStorage.setItem('quantedge_alerts', JSON.stringify(alerts));
+    } catch (e) {}
   }, [alerts]);
 
   // Fetch real-time market tickers from backend API periodically
@@ -136,7 +179,9 @@ export function App() {
         const res = await fetch('/api/market/tickers');
         if (res.ok) {
           const data = await res.json();
-          if (Array.isArray(data) && data.length > 0) {
+          if (data && Array.isArray(data.tickers) && data.tickers.length > 0) {
+            setTickers(data.tickers);
+          } else if (Array.isArray(data) && data.length > 0) {
             setTickers(data);
           }
         }
@@ -244,17 +289,24 @@ export function App() {
     });
 
   return (
-    <div className={`min-h-screen transition-colors duration-200 ${
-      isDark ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'
-    } flex flex-col font-sans selection:bg-cyan-500/30`}>
-      {/* Top Navigation Bar with Live Ticker Feed */}
-      <Navbar
-        user={user}
-        tickers={tickers}
-        isDark={isDark}
-        onToggleTheme={() => setIsDark(!isDark)}
-        onOpenAuth={() => setIsAuthOpen(true)}
-      />
+    <ErrorBoundary>
+      <div className={`min-h-screen transition-colors duration-200 ${
+        isDark ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'
+      } flex flex-col font-sans selection:bg-cyan-500/30`}>
+        {/* Top Navigation Bar with Live Ticker Feed */}
+        <Navbar
+          user={user}
+          tickers={tickers}
+          isDark={isDark}
+          onToggleTheme={() => setIsDark(!isDark)}
+          soundEnabled={soundEnabled}
+          onToggleSound={() => setSoundEnabled(!soundEnabled)}
+          isMobileFrame={isMobileFrame}
+          onToggleMobileFrame={() => setIsMobileFrame(!isMobileFrame)}
+          onOpenAuth={() => setIsAuthOpen(true)}
+          onOpenAlerts={() => setActiveTab('alerts')}
+          unreadAlertsCount={alerts.filter(a => a.enabled).length}
+        />
 
       {/* Frame Mode Switcher Floating Pill (React Native Mobile vs Desktop Cockpit) */}
       <div className="fixed bottom-4 right-4 z-40">
@@ -428,15 +480,16 @@ export function App() {
         </>
       )}
 
-      {/* User Authentication Modal */}
-      <AuthModal
-        isOpen={isAuthOpen}
-        onClose={() => setIsAuthOpen(false)}
-        user={user}
-        onLogin={(updated) => setUser(updated)}
-        isDark={isDark}
-      />
-    </div>
+        {/* User Authentication Modal */}
+        <AuthModal
+          isOpen={isAuthOpen}
+          onClose={() => setIsAuthOpen(false)}
+          user={user}
+          onLogin={(updated) => setUser(updated)}
+          isDark={isDark}
+        />
+      </div>
+    </ErrorBoundary>
   );
 }
 
