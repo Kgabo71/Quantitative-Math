@@ -51,13 +51,13 @@ export const MarketSimulatorView: React.FC<MarketSimulatorViewProps> = ({
   onExecuteTrade,
   isDark,
 }) => {
-  const [selectedSymbol, setSelectedSymbol] = useState<string>('BTC/USDT');
-  const [candles, setCandles] = useState<Candle[]>(() => generateCandles(68420, 60, 0.40, 0.05));
+  const [selectedSymbol, setSelectedSymbol] = useState<string>(() => tickers[0]?.symbol || 'US30');
+  const [candles, setCandles] = useState<Candle[]>(() => generateCandles(tickers[0]?.price || 40850.20, 60, 0.25, 0.05));
   const [isPlaying, setIsPlaying] = useState<boolean>(true);
   const [simulationSpeed, setSimulationSpeed] = useState<number>(1); // 1x, 5x, 20x
   const [activeRegime, setActiveRegime] = useState<'normal' | 'bull' | 'flash_crash' | 'range' | 'high_vol'>('normal');
   const [tradesTape, setTradesTape] = useState<MarketTrade[]>([]);
-  const [quickAmountUsd, setQuickAmountUsd] = useState<number>(1000);
+  const [quickAmountUsd, setQuickAmountUsd] = useState<number>(5000);
   const [showIndicators, setShowIndicators] = useState<{ bb: boolean; sma: boolean; ema: boolean; rsi: boolean }>({
     bb: true,
     sma: true,
@@ -66,27 +66,35 @@ export const MarketSimulatorView: React.FC<MarketSimulatorViewProps> = ({
   });
 
   const selectedTicker = tickers.find(t => t.symbol === selectedSymbol) || tickers[0] || {
-    symbol: 'BTC/USDT',
-    price: 68420,
-    bid: 68418,
-    ask: 68422,
-    spread: 4.0,
-    change24h: 3.4,
-    volume: 1400000,
-    volatility1m: 1.8,
-    type: 'crypto',
+    symbol: 'US30',
+    price: 40850.20,
+    bid: 40849.30,
+    ask: 40851.10,
+    spread: 1.8,
+    change24h: 0.62,
+    volume: 1850000000,
+    volatility1m: 0.95,
+    type: 'index' as const,
     timestamp: Date.now()
   };
 
   // Re-generate candles when asset symbol changes
   useEffect(() => {
-    setCandles(generateCandles(selectedTicker.price, 60, selectedTicker.type === 'crypto' ? 0.5 : 0.25, 0.05));
+    const isCrypto = selectedTicker.type === 'crypto';
+    const isGoldOrIndex = selectedTicker.symbol === 'US30' || selectedTicker.symbol === 'NAS100' || selectedTicker.symbol === 'XAU/USD';
+    setCandles(generateCandles(selectedTicker.price, 60, isCrypto ? 0.45 : (isGoldOrIndex ? 0.28 : 0.20), 0.05));
   }, [selectedSymbol]);
 
   // Level 2 Order Book generation based on selected ticker price and regime
   const orderBook: OrderBook = useMemo(() => {
     const mid = selectedTicker.price;
-    const tickSize = selectedTicker.type === 'fx' ? 0.0001 : (selectedTicker.price > 1000 ? 0.5 : 0.01);
+    let tickSize = 0.01;
+    if (selectedTicker.type === 'fx') tickSize = 0.0001;
+    else if (selectedTicker.symbol === 'US30') tickSize = 1.0;
+    else if (selectedTicker.symbol === 'NAS100') tickSize = 0.25;
+    else if (selectedTicker.symbol === 'XAU/USD') tickSize = 0.10;
+    else if (selectedTicker.price > 1000) tickSize = 0.5;
+
     const bids: OrderBookLevel[] = [];
     const asks: OrderBookLevel[] = [];
 
@@ -100,8 +108,8 @@ export const MarketSimulatorView: React.FC<MarketSimulatorViewProps> = ({
       const bidPrice = Number((mid - i * tickSize * (1 + (i * 0.1))).toFixed(selectedTicker.type === 'fx' ? 4 : 2));
       const askPrice = Number((mid + i * tickSize * (1 + (i * 0.1))).toFixed(selectedTicker.type === 'fx' ? 4 : 2));
 
-      const bidAmt = Number(((1.5 + Math.random() * 3.5 + imbalanceBias * 2) * (1 + i * 0.2)).toFixed(3));
-      const askAmt = Number(((1.5 + Math.random() * 3.5 - imbalanceBias * 2) * (1 + i * 0.2)).toFixed(3));
+      const bidAmt = Number(((1.5 + Math.random() * 3.5 + imbalanceBias * 2) * (1 + i * 0.2)).toFixed(selectedTicker.symbol === 'US30' || selectedTicker.symbol === 'NAS100' ? 1 : 3));
+      const askAmt = Number(((1.5 + Math.random() * 3.5 - imbalanceBias * 2) * (1 + i * 0.2)).toFixed(selectedTicker.symbol === 'US30' || selectedTicker.symbol === 'NAS100' ? 1 : 3));
 
       cumBidTotal += bidAmt;
       cumAskTotal += askAmt;
@@ -214,29 +222,41 @@ export const MarketSimulatorView: React.FC<MarketSimulatorViewProps> = ({
 
         {/* Asset Selector Chips */}
         <div className="flex items-center gap-2 overflow-x-auto pb-1">
-          {tickers.map((ticker) => (
-            <button
-              key={ticker.symbol}
-              id={`sim-asset-${ticker.symbol.replace('/', '-')}`}
-              onClick={() => setSelectedSymbol(ticker.symbol)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap border ${
-                selectedSymbol === ticker.symbol
-                  ? isDark
-                    ? 'bg-cyan-600/20 border-cyan-500 text-cyan-300 shadow-md shadow-cyan-950'
-                    : 'bg-cyan-50 border-cyan-400 text-cyan-900 shadow-sm'
-                  : isDark
-                    ? 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
-                    : 'bg-white border-slate-200 text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <div className="flex items-center gap-1.5">
-                <span>{ticker.symbol}</span>
-                <span className={`text-[10px] ${ticker.change24h >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                  ${ticker.price.toLocaleString()}
-                </span>
-              </div>
-            </button>
-          ))}
+          {tickers.map((ticker) => {
+            const isUserCore = ticker.symbol === 'US30' || ticker.symbol === 'NAS100' || ticker.symbol === 'XAU/USD';
+            const badgeLabel = ticker.symbol === 'US30' ? 'US30 INDEX' : ticker.symbol === 'NAS100' ? 'TECH 100' : ticker.symbol === 'XAU/USD' ? 'GOLD SPOT' : ticker.type.toUpperCase();
+
+            return (
+              <button
+                key={ticker.symbol}
+                id={`sim-asset-${ticker.symbol.replace('/', '-')}`}
+                onClick={() => setSelectedSymbol(ticker.symbol)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap border flex items-center gap-2 ${
+                  selectedSymbol === ticker.symbol
+                    ? isDark
+                      ? 'bg-cyan-600/25 border-cyan-500 text-cyan-200 shadow-md shadow-cyan-950'
+                      : 'bg-cyan-50 border-cyan-400 text-cyan-900 shadow-sm'
+                    : isDark
+                      ? isUserCore
+                        ? 'bg-slate-900/90 border-slate-700/80 text-slate-300 hover:border-cyan-500/50'
+                        : 'bg-slate-900/50 border-slate-800/80 text-slate-400 hover:text-slate-200'
+                      : 'bg-white border-slate-200 text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <div className="flex items-center gap-1.5">
+                  <span className="font-semibold">{ticker.symbol}</span>
+                  <span className={`text-[9px] px-1 py-0.2 rounded font-mono ${
+                    isUserCore ? 'bg-cyan-500/20 text-cyan-300' : 'bg-slate-800 text-slate-400'
+                  }`}>
+                    {badgeLabel}
+                  </span>
+                  <span className={`text-[10px] font-mono ${ticker.change24h >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                    ${ticker.price.toLocaleString()}
+                  </span>
+                </div>
+              </button>
+            );
+          })}
         </div>
       </div>
 

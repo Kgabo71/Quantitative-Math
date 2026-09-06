@@ -52,10 +52,13 @@ app.post('/api/gemini/tutor', async (req, res) => {
       });
     }
 
-    const systemInstruction = `You are "QuantEdge Alpha AI", an elite senior quantitative researcher and algorithmic trading mentor with deep expertise in stochastic calculus, statistical arbitrage, market microstructure, high-frequency execution, machine learning factor models, and derivatives pricing (Black-Scholes, Greeks, local volatility).
+    const systemInstruction = `You are "QuantEdge Alpha AI", an elite senior quantitative researcher and algorithmic trading mentor with deep expertise in index futures (US30 / Dow Jones, NAS100 / Nasdaq E-mini), precious metals (XAU/USD Gold Spot), stochastic calculus, statistical arbitrage, market microstructure, high-frequency execution, machine learning factor models, and derivatives pricing (Black-Scholes, Greeks, local volatility).
 
 Your goals:
-1. Explain quant finance concepts with mathematical rigor yet clear intuition.
+1. Provide specialized mathematical and microstructure intuition for US30 (Dow Jones Industrial Average), NAS100 (Nasdaq 100), and Gold (XAU/USD):
+   - US30: Price-weighted index dynamics, Opening Range Breakout (ORB 09:30 EST), Wall Street 30 constituent weighting (UNH, GS, MSFT), and Dow-to-Nasdaq rotation.
+   - NAS100: Tech-cap weighting, high-beta momentum, Order Flow Imbalance (OFI), gamma squeezes, and NY Killzone liquidity sweeps.
+   - XAU/USD (Gold): London AM/PM Fixings, real interest rate sensitivity (10-year TIPS yield regression), DXY inverse cointegration, and central bank reserve flows.
 2. Provide concrete formulas (in clean LaTeX or Markdown), algorithmic pseudocode / Python/TypeScript logic when appropriate.
 3. Highlight real-world friction: bid-ask spread, slippage, latency, transaction fees, market regime shifts, and look-ahead bias.
 4. Keep explanations structured with sections: "Intuition & Math", "Strategy Mechanics", "Risk & Microstructure Nuances", and "Actionable Takeaways".
@@ -163,31 +166,40 @@ app.get('/api/market/tickers', async (req, res) => {
   try {
     // Generate fresh high-frequency ticker updates
     const basePrices: Record<string, { price: number; change24h: number; volume: number; vol1m: number; type: string }> = {
-      'BTC/USDT': { price: 68420.50, change24h: 3.42, volume: 1420500000, vol1m: 1.85, type: 'crypto' },
-      'ETH/USDT': { price: 3540.20, change24h: -1.15, volume: 890400000, vol1m: 2.10, type: 'crypto' },
-      'SOL/USDT': { price: 178.65, change24h: 7.82, volume: 540200000, vol1m: 3.45, type: 'crypto' },
+      'US30': { price: 40850.20, change24h: 0.62, volume: 1850000000, vol1m: 0.95, type: 'index' },
+      'NAS100': { price: 19840.50, change24h: 1.34, volume: 2940000000, vol1m: 1.45, type: 'index' },
+      'XAU/USD': { price: 2498.80, change24h: 0.78, volume: 820000000, vol1m: 1.15, type: 'commodity' },
       'SPY': { price: 548.90, change24h: 0.85, volume: 42000000, vol1m: 0.65, type: 'equity' },
-      'QQQ': { price: 479.30, change24h: 1.25, volume: 36000000, vol1m: 0.95, type: 'equity' },
-      'NVDA': { price: 128.45, change24h: 4.12, volume: 78000000, vol1m: 2.80, type: 'equity' },
+      'BTC/USDT': { price: 68420.50, change24h: 3.42, volume: 1420500000, vol1m: 1.85, type: 'crypto' },
       'EUR/USD': { price: 1.0845, change24h: -0.22, volume: 125000000, vol1m: 0.35, type: 'fx' },
       'USD/JPY': { price: 154.20, change24h: 0.45, volume: 110000000, vol1m: 0.42, type: 'fx' }
     };
 
     const tickers = Object.entries(basePrices).map(([symbol, data]) => {
       // Add subtle dynamic micro-jitter
-      const jitter = (Math.random() - 0.5) * (data.price * 0.0008);
-      const currentPrice = Number((data.price + jitter).toFixed(data.type === 'fx' ? 4 : 2));
-      const high24h = Number((currentPrice * 1.025).toFixed(data.type === 'fx' ? 4 : 2));
-      const low24h = Number((currentPrice * 0.975).toFixed(data.type === 'fx' ? 4 : 2));
-      const bid = Number((currentPrice * 0.9998).toFixed(data.type === 'fx' ? 4 : 2));
-      const ask = Number((currentPrice * 1.0002).toFixed(data.type === 'fx' ? 4 : 2));
+      const jitter = (Math.random() - 0.5) * (data.price * 0.0006);
+      const isFx = data.type === 'fx';
+      const isIndex = data.type === 'index';
+      const currentPrice = Number((data.price + jitter).toFixed(isFx ? 4 : 2));
+      const high24h = Number((currentPrice * 1.018).toFixed(isFx ? 4 : 2));
+      const low24h = Number((currentPrice * 0.982).toFixed(isFx ? 4 : 2));
+      
+      let spreadValue = 0.02;
+      if (symbol === 'US30') spreadValue = 1.8;
+      else if (symbol === 'NAS100') spreadValue = 1.1;
+      else if (symbol === 'XAU/USD') spreadValue = 0.25;
+      else if (symbol === 'BTC/USDT') spreadValue = 4.0;
+      else if (isFx) spreadValue = 0.0002;
+
+      const bid = Number((currentPrice - spreadValue / 2).toFixed(isFx ? 4 : 2));
+      const ask = Number((currentPrice + spreadValue / 2).toFixed(isFx ? 4 : 2));
 
       return {
         symbol,
         price: currentPrice,
         bid,
         ask,
-        spread: Number((ask - bid).toFixed(data.type === 'fx' ? 4 : 2)),
+        spread: spreadValue,
         change24h: Number((data.change24h + (Math.random() - 0.5) * 0.05).toFixed(2)),
         volume: data.volume,
         volatility1m: Number((data.vol1m + (Math.random() - 0.5) * 0.2).toFixed(2)),

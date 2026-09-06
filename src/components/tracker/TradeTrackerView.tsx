@@ -34,14 +34,25 @@ export const TradeTrackerView: React.FC<TradeTrackerViewProps> = ({
   onCloseTrade,
   isDark,
 }) => {
-  const [symbol, setSymbol] = useState<string>('BTC/USDT');
+  const [symbol, setSymbol] = useState<string>(() => tickers[0]?.symbol || 'US30');
   const [side, setSide] = useState<'BUY' | 'SELL'>('BUY');
   const [orderType, setOrderType] = useState<'MARKET' | 'LIMIT' | 'STOP_MARKET'>('MARKET');
-  const [amountUsd, setAmountUsd] = useState<number>(2500);
-  const [strategyTag, setStrategyTag] = useState<string>('StatArb Pairs');
-  const [notes, setNotes] = useState<string>('Mean reversion deviation above 2.2 sigma.');
+  const [amountUsd, setAmountUsd] = useState<number>(5000);
+  const [strategyTag, setStrategyTag] = useState<string>('Opening Range Breakout (ORB)');
+  const [notes, setNotes] = useState<string>('NY 09:30 AM liquidity sweep & breaker block entry.');
 
-  const currentTicker = tickers.find(t => t.symbol === symbol) || tickers[0];
+  const currentTicker = tickers.find(t => t.symbol === symbol) || tickers[0] || {
+    symbol: 'US30',
+    price: 40850.20,
+    bid: 40849.30,
+    ask: 40851.10,
+    spread: 1.8,
+    change24h: 0.62,
+    volume: 1850000000,
+    volatility1m: 0.95,
+    type: 'index' as const,
+    timestamp: Date.now()
+  };
 
   const handlePlaceOrder = (e: React.FormEvent) => {
     e.preventDefault();
@@ -264,10 +275,14 @@ export const TradeTrackerView: React.FC<TradeTrackerViewProps> = ({
                 onChange={(e) => setStrategyTag(e.target.value)}
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-medium text-slate-200 focus:outline-none focus:border-cyan-500"
               >
-                <option value="StatArb Pairs">StatArb Pairs Trading</option>
-                <option value="Trend Following">Dual EMA Trend Following</option>
+                <option value="Opening Range Breakout (ORB)">Opening Range Breakout (ORB - US30/NAS100)</option>
+                <option value="London/NY Killzone">London/NY Killzone (XAU/USD & Indices)</option>
+                <option value="Trend Following">Dual EMA Trend Following (12/50)</option>
+                <option value="Mean Reversion StatArb">Mean Reversion StatArb (Bollinger 2σ)</option>
+                <option value="Order Flow Imbalance (OFI)">Order Flow Imbalance & Footprint</option>
+                <option value="Macro Catalyst (CPI/NFP/FOMC)">Macro Catalyst (CPI / NFP / FOMC)</option>
+                <option value="Fair Value Gap (FVG)">Fair Value Gap & Institutional Order Flow</option>
                 <option value="Options Gamma">Options Gamma Scalp</option>
-                <option value="Avellaneda MM">Avellaneda-Stoikov Market Making</option>
                 <option value="Discretionary">Discretionary Alpha</option>
               </select>
             </div>

@@ -233,6 +233,31 @@ export const AiTutorView: React.FC<AiTutorViewProps> = ({
         <div ref={messagesEndRef} />
       </div>
 
+      {/* Quick Prompts for US30, Nasdaq, and Gold */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-[11px]">
+        {[
+          { label: '🏛️ US30 15m ORB Strategy', prompt: 'How do you design an algorithmic 15-minute Opening Range Breakout (ORB) strategy for US30 at the 09:30 AM NY Open with ATR stops and breaker block confirmation?' },
+          { label: '💻 Nasdaq Order Flow & Beta', prompt: 'Explain how Order Flow Imbalance (OFI), high-beta tech weighting, and gamma exposure influence intraday Nasdaq 100 (NAS100) trend runs.' },
+          { label: '🪙 Gold vs Real Yields Math', prompt: 'What is the mathematical cointegration and regression formula between Gold (XAU/USD), US 10-Year TIPS Real Yields, and the DXY dollar index?' },
+          { label: '⚖️ NAS100 vs US30 Stat-Arb', prompt: 'Show me how to compute the rolling hedge ratio (OLS beta) and Z-score for a cointegrated pairs trading strategy between Nasdaq 100 and Dow Jones 30.' },
+        ].map((item, idx) => (
+          <button
+            key={idx}
+            type="button"
+            onClick={() => {
+              setInputPrompt(item.prompt);
+            }}
+            className={`px-2.5 py-1 rounded-lg border whitespace-nowrap transition-colors cursor-pointer text-[10px] font-medium ${
+              isDark
+                ? 'bg-slate-900 border-slate-800 text-slate-300 hover:border-cyan-500 hover:text-cyan-300'
+                : 'bg-white border-slate-200 text-slate-700 hover:border-cyan-400 hover:text-cyan-800'
+            }`}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
+
       {/* Input Box */}
       <form
         onSubmit={(e) => {

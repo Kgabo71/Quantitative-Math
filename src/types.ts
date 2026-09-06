@@ -1,4 +1,4 @@
-export type AssetClass = 'crypto' | 'equity' | 'fx';
+export type AssetClass = 'crypto' | 'equity' | 'fx' | 'index' | 'commodity';
 
 export interface MarketTicker {
   symbol: string;

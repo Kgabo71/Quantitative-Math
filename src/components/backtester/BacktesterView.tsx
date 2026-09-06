@@ -47,9 +47,12 @@ export const BacktesterView: React.FC<BacktesterViewProps> = ({
   isDark,
   onNavigateToTutor,
 }) => {
+  const defaultSymbol = tickers[0]?.symbol || 'US30';
+  const defaultPrice = tickers[0]?.price || 40850.20;
+
   const [config, setConfig] = useState<BacktestConfig>({
     strategyType: 'mean_reversion_bollinger',
-    symbol: 'BTC/USDT',
+    symbol: defaultSymbol,
     startDate: '2025-01-01',
     endDate: '2026-09-01',
     initialCapital: 100000,
@@ -74,10 +77,10 @@ export const BacktesterView: React.FC<BacktesterViewProps> = ({
 
   // Initial backtest result
   const [result, setResult] = useState<BacktestResult>(() => {
-    const candles = generateCandles(68420, 150, 0.45, 0.12);
+    const candles = generateCandles(defaultPrice, 150, 0.28, 0.08);
     return runBacktest(candles, {
       strategyType: 'mean_reversion_bollinger',
-      symbol: 'BTC/USDT',
+      symbol: defaultSymbol,
       startDate: '2025-01-01',
       endDate: '2026-09-01',
       initialCapital: 100000,
@@ -102,8 +105,8 @@ export const BacktesterView: React.FC<BacktesterViewProps> = ({
 
     setTimeout(() => {
       const ticker = tickers.find(t => t.symbol === config.symbol);
-      const basePrice = ticker?.price || 68420;
-      const candles = generateCandles(basePrice, 180, 0.40, 0.08);
+      const basePrice = ticker?.price || defaultPrice;
+      const candles = generateCandles(basePrice, 180, 0.28, 0.08);
       const res = runBacktest(candles, config);
       setResult(res);
       setIsRunning(false);
@@ -223,9 +226,14 @@ export const BacktesterView: React.FC<BacktesterViewProps> = ({
                   onChange={(e) => setConfig({ ...config, symbol: e.target.value })}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-medium text-slate-200 focus:outline-none focus:border-cyan-500"
                 >
-                  {tickers.map((t) => (
-                    <option key={t.symbol} value={t.symbol}>{t.symbol}</option>
-                  ))}
+                  {tickers.map((t) => {
+                    const extra = t.symbol === 'US30' ? ' (Dow Jones 30)' : t.symbol === 'NAS100' ? ' (Nasdaq 100)' : t.symbol === 'XAU/USD' ? ' (Gold Spot)' : '';
+                    return (
+                      <option key={t.symbol} value={t.symbol}>
+                        {t.symbol}{extra}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
 

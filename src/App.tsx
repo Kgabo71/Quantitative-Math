@@ -21,21 +21,21 @@ import { Smartphone, Monitor } from 'lucide-react';
 
 const DEFAULT_USER: UserProfile = {
   id: 'usr-1',
-  name: 'Dr. Evelyn Vance',
-  username: 'evelyn_quant',
-  email: 'evelyn.vance@quantedge.ai',
+  name: 'Index & Gold Trader',
+  username: 'quant_trader',
+  email: 'trader@quantedge.ai',
   role: 'Senior Algorithmic Trader',
   balanceUsd: 100000,
   marginUsedUsd: 15000,
   maxDailyLossLimitUsd: 5000,
   maxPositionSizeUsd: 25000,
-  xpPoints: 350,
-  streakDays: 4,
+  xpPoints: 420,
+  streakDays: 5,
   level: 'INTERMEDIATE',
   riskTolerance: 'MODERATE',
   completedLessons: ['stat-arb-pairs-1', 'black-scholes-greeks-1'],
   bookmarkedLessons: [],
-  watchlist: ['BTC/USDT', 'NVDA', 'SPY'],
+  watchlist: ['US30', 'NAS100', 'XAU/USD', 'SPY', 'BTC/USDT'],
   soundEnabled: true,
   pushNotificationsEnabled: true,
 };
@@ -43,55 +43,55 @@ const DEFAULT_USER: UserProfile = {
 const DEFAULT_TRADES: TradeRecord[] = [
   {
     id: 'tr-1',
-    symbol: 'BTC/USDT',
+    symbol: 'US30',
     side: 'BUY',
     orderType: 'MARKET',
-    price: 67200,
-    amount: 0.85,
-    totalUsd: 57120,
+    price: 40820,
+    amount: 2.0,
+    totalUsd: 81640,
     status: 'OPEN',
-    strategyTag: 'StatArb Pairs',
-    notes: 'Co-integrated spread breached 2.2 sigma standard deviation.',
-    createdAt: Date.now() - 3600000 * 5,
+    strategyTag: 'Opening Range Breakout (ORB)',
+    notes: 'NY 09:30 AM liquidity sweep & breaker block retest on Wall Street 30.',
+    createdAt: Date.now() - 3600000 * 3,
   },
   {
     id: 'tr-2',
-    symbol: 'NVDA',
+    symbol: 'NAS100',
     side: 'BUY',
     orderType: 'LIMIT',
-    price: 122.50,
-    amount: 150,
-    totalUsd: 18375,
+    price: 19820.50,
+    amount: 3.0,
+    totalUsd: 59461.50,
     status: 'OPEN',
     strategyTag: 'Trend Following',
-    notes: 'Dual EMA 12/50 golden cross confirmation with ATR filter.',
-    createdAt: Date.now() - 3600000 * 12,
+    notes: 'Dual EMA 12/50 golden cross on 5m chart with Order Flow Imbalance confirmation.',
+    createdAt: Date.now() - 3600000 * 8,
   },
   {
     id: 'tr-3',
-    symbol: 'ETH/USDT',
-    side: 'SELL',
+    symbol: 'XAU/USD',
+    side: 'BUY',
     orderType: 'MARKET',
-    price: 3620,
-    amount: 4.0,
-    totalUsd: 14480,
+    price: 2492.40,
+    amount: 20.0,
+    totalUsd: 49848,
     status: 'CLOSED',
-    pnl: 320,
-    strategyTag: 'Options Gamma',
-    notes: 'Delta neutral hedge rebalance after local variance surge.',
-    createdAt: Date.now() - 3600000 * 24,
+    pnl: 1480,
+    strategyTag: 'Mean Reversion StatArb',
+    notes: 'London Fix mean reversion bounce off 2.5 sigma lower Bollinger Band.',
+    createdAt: Date.now() - 3600000 * 18,
   }
 ];
 
 const DEFAULT_ALERTS: VolatilityAlert[] = [
-  { id: 'al-1', symbol: 'BTC/USDT', type: 'VOLATILITY_SPIKE', threshold: 3.5, enabled: true, pushNotification: true, soundAlert: true, createdAt: Date.now() },
-  { id: 'al-2', symbol: 'NVDA', type: 'PRICE_ABOVE', threshold: 135.0, enabled: true, pushNotification: true, soundAlert: false, createdAt: Date.now() },
-  { id: 'al-3', symbol: 'SPY', type: 'DRAWDOWN_LIMIT', threshold: 2.0, enabled: true, pushNotification: true, soundAlert: true, createdAt: Date.now() },
+  { id: 'al-1', symbol: 'US30', type: 'VOLATILITY_SPIKE', threshold: 1.5, enabled: true, pushNotification: true, soundAlert: true, createdAt: Date.now() },
+  { id: 'al-2', symbol: 'NAS100', type: 'PRICE_ABOVE', threshold: 20000.0, enabled: true, pushNotification: true, soundAlert: false, createdAt: Date.now() },
+  { id: 'al-3', symbol: 'XAU/USD', type: 'SPREAD_WIDENING', threshold: 0.40, enabled: true, pushNotification: true, soundAlert: true, createdAt: Date.now() },
 ];
 
 export function App() {
   const [isDark, setIsDark] = useState<boolean>(true);
-  const [activeTab, setActiveTab] = useState<TabType>('academy');
+  const [activeTab, setActiveTab] = useState<TabType>('simulation');
   const [isAuthOpen, setIsAuthOpen] = useState<boolean>(false);
   const [isMobileFrame, setIsMobileFrame] = useState<boolean>(false);
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
@@ -121,12 +121,12 @@ export function App() {
 
   // Real-time market tickers
   const [tickers, setTickers] = useState<MarketTicker[]>([
-    { symbol: 'BTC/USDT', price: 68420, bid: 68418, ask: 68422, spread: 4.0, change24h: 3.42, volume: 1420000, volatility1m: 2.1, type: 'crypto', timestamp: Date.now() },
-    { symbol: 'ETH/USDT', price: 3540, bid: 3539.5, ask: 3540.5, spread: 1.0, change24h: -1.18, volume: 890000, volatility1m: 1.9, type: 'crypto', timestamp: Date.now() },
-    { symbol: 'SOL/USDT', price: 184.50, bid: 184.45, ask: 184.55, spread: 0.1, change24h: 5.64, volume: 450000, volatility1m: 3.4, type: 'crypto', timestamp: Date.now() },
-    { symbol: 'NVDA', price: 128.45, bid: 128.43, ask: 128.47, spread: 0.04, change24h: 2.15, volume: 2200000, volatility1m: 1.4, type: 'equity', timestamp: Date.now() },
-    { symbol: 'SPY', price: 546.20, bid: 546.18, ask: 546.22, spread: 0.04, change24h: 0.45, volume: 3800000, volatility1m: 0.8, type: 'equity', timestamp: Date.now() },
-    { symbol: 'EUR/USD', price: 1.0874, bid: 1.0873, ask: 1.0875, spread: 0.0002, change24h: -0.12, volume: 5400000, volatility1m: 0.5, type: 'fx', timestamp: Date.now() },
+    { symbol: 'US30', price: 40850.20, bid: 40849.30, ask: 40851.10, spread: 1.8, change24h: 0.62, volume: 1850000000, volatility1m: 0.95, type: 'index', timestamp: Date.now() },
+    { symbol: 'NAS100', price: 19840.50, bid: 19839.95, ask: 19841.05, spread: 1.1, change24h: 1.34, volume: 2940000000, volatility1m: 1.45, type: 'index', timestamp: Date.now() },
+    { symbol: 'XAU/USD', price: 2498.80, bid: 2498.67, ask: 2498.93, spread: 0.25, change24h: 0.78, volume: 820000000, volatility1m: 1.15, type: 'commodity', timestamp: Date.now() },
+    { symbol: 'SPY', price: 548.90, bid: 548.88, ask: 548.92, spread: 0.04, change24h: 0.85, volume: 42000000, volatility1m: 0.65, type: 'equity', timestamp: Date.now() },
+    { symbol: 'BTC/USDT', price: 68420.50, bid: 68418.50, ask: 68422.50, spread: 4.0, change24h: 3.42, volume: 1420500000, volatility1m: 1.85, type: 'crypto', timestamp: Date.now() },
+    { symbol: 'EUR/USD', price: 1.0845, bid: 1.0844, ask: 1.0846, spread: 0.0002, change24h: -0.22, volume: 125000000, volatility1m: 0.35, type: 'fx', timestamp: Date.now() },
   ]);
 
   // Paper Trades Journal

@@ -30,49 +30,49 @@ export const RiskDashboardView: React.FC<RiskDashboardViewProps> = ({
 
   const defaultPositions: PositionRisk[] = positions.length > 0 ? positions : [
     {
-      symbol: 'BTC/USDT',
+      symbol: 'US30',
       side: 'LONG',
-      amount: 0.85,
-      entryPrice: 67200,
-      markPrice: 68420,
-      notionalUsd: 58157,
-      unrealizedPnl: 1037,
-      unrealizedPnlPct: 1.81,
-      delta: 0.85,
+      amount: 1.0,
+      entryPrice: 40820,
+      markPrice: 40850.20,
+      notionalUsd: 40850,
+      unrealizedPnl: 30.20,
+      unrealizedPnlPct: 0.74,
+      delta: 1.0,
+      gamma: 0.0000,
+      liquidationPrice: 38200,
+      stopLossPrice: 40500,
+      takeProfitPrice: 41350
+    },
+    {
+      symbol: 'NAS100',
+      side: 'LONG',
+      amount: 2.0,
+      entryPrice: 19810.00,
+      markPrice: 19840.50,
+      notionalUsd: 39681,
+      unrealizedPnl: 61.00,
+      unrealizedPnlPct: 1.54,
+      delta: 2.0,
       gamma: 0.0001,
-      liquidationPrice: 42100,
-      stopLossPrice: 65000,
-      takeProfitPrice: 74000
+      liquidationPrice: 18400,
+      stopLossPrice: 19650,
+      takeProfitPrice: 20200
     },
     {
-      symbol: 'ETH/USDT',
-      side: 'SHORT',
-      amount: 5.2,
-      entryPrice: 3580,
-      markPrice: 3540,
-      notionalUsd: 18408,
-      unrealizedPnl: 208,
-      unrealizedPnlPct: 1.12,
-      delta: -5.2,
-      gamma: 0.0003,
-      liquidationPrice: 4800,
-      stopLossPrice: 3750,
-      takeProfitPrice: 3200
-    },
-    {
-      symbol: 'NVDA',
+      symbol: 'XAU/USD',
       side: 'LONG',
-      amount: 150,
-      entryPrice: 122.50,
-      markPrice: 128.45,
-      notionalUsd: 19267,
-      unrealizedPnl: 892.50,
-      unrealizedPnlPct: 4.85,
-      delta: 150,
-      gamma: 0.0,
-      liquidationPrice: 85.00,
-      stopLossPrice: 118.00,
-      takeProfitPrice: 145.00
+      amount: 15.0,
+      entryPrice: 2492.50,
+      markPrice: 2498.80,
+      notionalUsd: 37482,
+      unrealizedPnl: 94.50,
+      unrealizedPnlPct: 2.53,
+      delta: 15.0,
+      gamma: 0.0000,
+      liquidationPrice: 2320,
+      stopLossPrice: 2470,
+      takeProfitPrice: 2540
     }
   ];
 
@@ -82,51 +82,51 @@ export const RiskDashboardView: React.FC<RiskDashboardViewProps> = ({
   const marginUsagePct = Math.min(100, Number(((totalNotional * 0.15) / (user.balanceUsd || 100000) * 100).toFixed(1)));
 
   // Value at Risk Calculations (1-day horizon, 95% and 99%)
-  const portfolioDailyVol = 0.024; // 2.4% daily portfolio volatility
+  const portfolioDailyVol = 0.019; // 1.9% daily portfolio volatility
   const var95Usd = Math.round(totalNotional * 1.645 * portfolioDailyVol);
   const var99Usd = Math.round(totalNotional * 2.326 * portfolioDailyVol);
   const cvar95Usd = Math.round(var95Usd * 1.35);
 
   const stressScenarios: StressScenario[] = [
     {
-      id: 'scenario-crypto-crash',
-      name: 'Crypto Liquidation Cascade',
-      description: 'Major exchange de-leveraging cascade with 15% instant spot drop and 10x funding spike.',
-      assetShockPct: { 'BTC/USDT': -15, 'ETH/USDT': -22, 'SOL/USDT': -28, 'NVDA': -2 },
-      volatilityShockPct: 150,
-      spreadMultiplier: 4.0,
-      estimatedPortfolioImpactPct: -8.4,
-      estimatedLossUsd: Math.round(totalNotional * 0.084)
-    },
-    {
-      id: 'scenario-black-monday',
-      name: 'Black Monday Market Crash',
-      description: 'Systemic broad market crash (-20% Equities, +120% VIX spike, flight to safe haven USD).',
-      assetShockPct: { 'SPY': -20, 'QQQ': -24, 'NVDA': -26, 'BTC/USDT': -18, 'EUR/USD': -3.5 },
+      id: 'scenario-tech-crash',
+      name: 'Nasdaq Tech Selloff & VIX Spike',
+      description: 'Major megacap tech correction with Nasdaq dropping -6.5% and flight into safe haven Gold.',
+      assetShockPct: { 'NAS100': -6.5, 'US30': -3.2, 'XAU/USD': 2.8, 'SPY': -3.5 },
       volatilityShockPct: 120,
-      spreadMultiplier: 6.0,
-      estimatedPortfolioImpactPct: -14.2,
-      estimatedLossUsd: Math.round(totalNotional * 0.142)
+      spreadMultiplier: 3.5,
+      estimatedPortfolioImpactPct: -2.3,
+      estimatedLossUsd: Math.round(totalNotional * 0.023)
     },
     {
       id: 'scenario-rate-shock',
-      name: 'Hawkish Fed Rate Shock (+100bps)',
-      description: 'Unexpected emergency rate hike shifting bond yields, triggering tech selloff and dollar surge.',
-      assetShockPct: { 'NVDA': -12, 'QQQ': -9, 'SPY': -6, 'EUR/USD': -4.2, 'USD/JPY': 3.5 },
-      volatilityShockPct: 60,
+      name: 'Hawkish Fed Rate Shock (+75bps)',
+      description: 'Surprise rate hike surge in 10-Yr Real Yields pressurizing Gold and High-Beta Tech.',
+      assetShockPct: { 'XAU/USD': -3.8, 'NAS100': -4.5, 'US30': -2.4, 'SPY': -2.1 },
+      volatilityShockPct: 75,
       spreadMultiplier: 2.5,
-      estimatedPortfolioImpactPct: -4.8,
-      estimatedLossUsd: Math.round(totalNotional * 0.048)
+      estimatedPortfolioImpactPct: -3.6,
+      estimatedLossUsd: Math.round(totalNotional * 0.036)
     },
     {
-      id: 'scenario-liquidity-freeze',
-      name: 'Order Book Liquidity Freeze',
-      description: 'Flash dry-up of top-of-book depth with 500% spread widening and massive slippage.',
-      assetShockPct: { 'BTC/USDT': -6, 'ETH/USDT': -8, 'NVDA': -5 },
-      volatilityShockPct: 90,
-      spreadMultiplier: 5.0,
-      estimatedPortfolioImpactPct: -5.1,
-      estimatedLossUsd: Math.round(totalNotional * 0.051)
+      id: 'scenario-safe-haven',
+      name: 'Geopolitical Risk Flight-to-Quality',
+      description: 'Surge in physical gold bullion demand with equity index drawdown across Wall Street.',
+      assetShockPct: { 'XAU/USD': 5.5, 'US30': -2.1, 'NAS100': -2.8, 'EUR/USD': -1.2 },
+      volatilityShockPct: 85,
+      spreadMultiplier: 3.0,
+      estimatedPortfolioImpactPct: 0.9,
+      estimatedLossUsd: 0
+    },
+    {
+      id: 'scenario-ny-open-squeeze',
+      name: '09:30 AM NY Open Liquidity Expansion',
+      description: 'Bullish opening bell momentum sweep across US30 and Nasdaq 100 with massive order flow volume.',
+      assetShockPct: { 'US30': 2.2, 'NAS100': 3.1, 'XAU/USD': 0.8 },
+      volatilityShockPct: 40,
+      spreadMultiplier: 1.2,
+      estimatedPortfolioImpactPct: 2.1,
+      estimatedLossUsd: 0
     }
   ];
 

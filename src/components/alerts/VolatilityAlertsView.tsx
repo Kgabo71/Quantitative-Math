@@ -33,9 +33,9 @@ export const VolatilityAlertsView: React.FC<VolatilityAlertsViewProps> = ({
   onDeleteAlert,
   isDark,
 }) => {
-  const [symbol, setSymbol] = useState<string>('BTC/USDT');
+  const [symbol, setSymbol] = useState<string>(() => tickers[0]?.symbol || 'US30');
   const [type, setType] = useState<VolatilityAlert['type']>('VOLATILITY_SPIKE');
-  const [threshold, setThreshold] = useState<number>(3.5);
+  const [threshold, setThreshold] = useState<number>(1.5);
   const [pushPermission, setPushPermission] = useState<NotificationPermission>(() => {
     try {
       if (typeof window !== 'undefined' && 'Notification' in window) {
@@ -157,9 +157,14 @@ export const VolatilityAlertsView: React.FC<VolatilityAlertsViewProps> = ({
                 onChange={(e) => setSymbol(e.target.value)}
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-medium text-slate-200 focus:outline-none focus:border-cyan-500"
               >
-                {tickers.map(t => (
-                  <option key={t.symbol} value={t.symbol}>{t.symbol}</option>
-                ))}
+                {tickers.map(t => {
+                  const extra = t.symbol === 'US30' ? ' (Dow Jones 30)' : t.symbol === 'NAS100' ? ' (Nasdaq 100)' : t.symbol === 'XAU/USD' ? ' (Gold Spot)' : '';
+                  return (
+                    <option key={t.symbol} value={t.symbol}>
+                      {t.symbol}{extra} (${t.price.toLocaleString()})
+                    </option>
+                  );
+                })}
               </select>
             </div>
 
