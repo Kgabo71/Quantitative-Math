@@ -1,7 +1,7 @@
 import React from 'react';
 import { 
   GraduationCap, 
-  Activity, 
+  CandlestickChart, 
   FlaskConical, 
   ShieldAlert, 
   BookOpen, 
@@ -25,12 +25,12 @@ export const NavigationTabs: React.FC<NavigationTabsProps> = ({
   isMobileFrame = false,
 }) => {
   const navItems: { id: TabType; label: string; icon: React.ElementType; badge?: string }[] = [
+    { id: 'simulation', label: 'TradingView Terminal', icon: CandlestickChart, badge: 'US30 · NAS · Gold' },
     { id: 'academy', label: 'Quant Academy', icon: GraduationCap, badge: 'Interactive' },
-    { id: 'simulation', label: 'HF Simulator', icon: Activity, badge: 'Live L2' },
     { id: 'backtester', label: 'Strategy Backtester', icon: FlaskConical },
     { id: 'risk', label: 'Risk Analytics', icon: ShieldAlert },
     { id: 'journal', label: 'Trade Journal', icon: BookOpen },
-    { id: 'tutor', label: 'AI Quant Tutor', icon: Bot, badge: 'Gemini 3.8' },
+    { id: 'tutor', label: 'AI Quant Tutor', icon: Bot, badge: 'Gemini' },
     { id: 'alerts', label: 'Volatility Alerts', icon: BellRing },
   ];
 

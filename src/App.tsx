@@ -352,7 +352,10 @@ export function App() {
                 <MarketSimulatorView
                   tickers={tickers}
                   user={user}
+                  trades={trades}
                   onExecuteTrade={handleAddTrade}
+                  onCloseTrade={handleCloseTrade}
+                  alerts={alerts}
                   isDark={isDark}
                 />
               )}
@@ -431,7 +434,10 @@ export function App() {
               <MarketSimulatorView
                 tickers={tickers}
                 user={user}
+                trades={trades}
                 onExecuteTrade={handleAddTrade}
+                onCloseTrade={handleCloseTrade}
+                alerts={alerts}
                 isDark={isDark}
               />
             )}
