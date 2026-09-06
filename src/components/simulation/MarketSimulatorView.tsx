@@ -7,7 +7,9 @@ import {
   MarketTrade, 
   UserProfile, 
   TradeRecord,
-  VolatilityAlert
+  VolatilityAlert,
+  TradeSignal,
+  TradingBotConfig
 } from '../../types';
 import { generateCandles, soundEngine } from '../../utils/quantEngine';
 import { TradingViewHeader, ChartStyleType, TimeframeType, IndicatorSettings } from '../tradingview/TradingViewHeader';
@@ -15,6 +17,7 @@ import { DrawingToolbar, DrawingToolType } from '../tradingview/DrawingToolbar';
 import { TradingViewChart } from '../tradingview/TradingViewChart';
 import { TradingViewRightDock } from '../tradingview/TradingViewRightDock';
 import { TradingViewBottomConsole } from '../tradingview/TradingViewBottomConsole';
+import { TradeAnalyzerModal } from '../signals/TradeAnalyzerModal';
 
 export interface MarketSimulatorViewProps {
   tickers: MarketTicker[];
@@ -24,6 +27,9 @@ export interface MarketSimulatorViewProps {
   onCloseTrade?: (id: string, exitPrice: number) => void;
   alerts?: VolatilityAlert[];
   isDark: boolean;
+  signals?: TradeSignal[];
+  botConfig?: TradingBotConfig;
+  onToggleBot?: () => void;
 }
 
 export const MarketSimulatorView: React.FC<MarketSimulatorViewProps> = ({
@@ -34,9 +40,13 @@ export const MarketSimulatorView: React.FC<MarketSimulatorViewProps> = ({
   onCloseTrade = () => {},
   alerts = [],
   isDark,
+  signals = [],
+  botConfig,
+  onToggleBot = () => {},
 }) => {
   // Selected Symbol (Defaults to US30)
   const [selectedSymbol, setSelectedSymbol] = useState<string>(() => tickers[0]?.symbol || 'US30');
+  const [activeSignalForAnalyzer, setActiveSignalForAnalyzer] = useState<TradeSignal | null>(null);
   
   // Header Settings
   const [chartStyle, setChartStyle] = useState<ChartStyleType>('candles');
@@ -303,7 +313,7 @@ export const MarketSimulatorView: React.FC<MarketSimulatorViewProps> = ({
           onCloseReplay={() => setIsReplayOpen(false)}
         />
 
-        {/* Right Dock (Watchlist, DOM Level 2, Order Ticket, Calendar, Alerts) */}
+        {/* Right Dock (Watchlist, DOM Level 2, Order Ticket, Calendar, Alerts, Signals & Bot) */}
         <TradingViewRightDock
           currentTicker={currentTicker}
           tickers={tickers}
@@ -312,6 +322,10 @@ export const MarketSimulatorView: React.FC<MarketSimulatorViewProps> = ({
           user={user}
           alerts={alerts}
           onExecuteTrade={onExecuteTrade}
+          signals={signals}
+          onOpenAnalyzer={(sig) => setActiveSignalForAnalyzer(sig)}
+          botConfig={botConfig}
+          onToggleBot={onToggleBot}
         />
       </div>
 
@@ -324,6 +338,37 @@ export const MarketSimulatorView: React.FC<MarketSimulatorViewProps> = ({
         isExpanded={isBottomExpanded}
         onToggleExpand={() => setIsBottomExpanded(!isBottomExpanded)}
       />
+
+      {/* In-Depth Trade Analyzer Modal */}
+      {activeSignalForAnalyzer && (
+        <TradeAnalyzerModal
+          isOpen={Boolean(activeSignalForAnalyzer)}
+          onClose={() => setActiveSignalForAnalyzer(null)}
+          signal={activeSignalForAnalyzer}
+          currentPrice={currentTicker.price}
+          onExecuteTrade={(sig) => {
+            onExecuteTrade({
+              symbol: sig.symbol,
+              side: sig.direction,
+              orderType: 'MARKET',
+              price: currentTicker.price,
+              amount: 1.0,
+              totalUsd: currentTicker.price * 1.0,
+              status: 'OPEN',
+              strategyTag: sig.strategyName,
+              notes: `Executed from Analyzer | SL: $${sig.stopLoss} | BE: $${sig.breakEvenPrice} | TP: $${sig.tp2}`,
+              stopLoss: sig.stopLoss,
+              takeProfit: sig.tp2,
+              breakEvenPrice: sig.breakEvenPrice,
+              isBreakEvenMoved: false,
+              isBotTrade: false,
+              signalId: sig.id,
+            });
+            setActiveSignalForAnalyzer(null);
+          }}
+          isDark={isDark}
+        />
+      )}
     </div>
   );
 };

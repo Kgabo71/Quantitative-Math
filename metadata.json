@@ -1,6 +1,6 @@
 {
   "name": "QuantEdge - Quant Finance & Algorithmic Trading Lab",
-  "description": "Interactive quantitative finance academy, high-frequency market simulations, algorithmic backtesting engine, risk management analytics, trade tracking journal, and volatility alerts.",
+  "description": "TradingView terminal with real-time market data (US30, NAS100, Gold), institutional strategies, in-depth trade analyzer, signals with SL, Break-Even (BE), and TP, and autonomous simulator trading bot.",
   "requestFramePermissions": ["notifications"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

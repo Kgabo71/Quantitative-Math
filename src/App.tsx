@@ -8,6 +8,7 @@ import { RiskDashboardView } from './components/risk/RiskDashboardView';
 import { TradeTrackerView } from './components/tracker/TradeTrackerView';
 import { AiTutorView } from './components/tutor/AiTutorView';
 import { VolatilityAlertsView } from './components/alerts/VolatilityAlertsView';
+import { SignalsAndBotView } from './components/signals/SignalsAndBotView';
 import { AuthModal } from './components/auth/AuthModal';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { 
@@ -15,8 +16,13 @@ import {
   UserProfile, 
   TradeRecord, 
   VolatilityAlert, 
-  PositionRisk 
+  PositionRisk,
+  TradeSignal,
+  TradingBotConfig,
+  BotActivityLog
 } from './types';
+import { INITIAL_SIGNALS, DEFAULT_BOT_CONFIG } from './utils/botEngine';
+import { soundEngine } from './utils/quantEngine';
 import { Smartphone, Monitor } from 'lucide-react';
 
 const DEFAULT_USER: UserProfile = {
@@ -153,6 +159,50 @@ export function App() {
     return DEFAULT_ALERTS;
   });
 
+  // Trading Signals (with SL, BE, TP)
+  const [signals, setSignals] = useState<TradeSignal[]>(() => {
+    try {
+      const saved = localStorage.getItem('quantedge_signals');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {}
+    return INITIAL_SIGNALS;
+  });
+
+  // Simulator Trading Bot Configuration
+  const [botConfig, setBotConfig] = useState<TradingBotConfig>(() => {
+    try {
+      const saved = localStorage.getItem('quantedge_bot_config');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed === 'object') return { ...DEFAULT_BOT_CONFIG, ...parsed };
+      }
+    } catch (e) {}
+    return DEFAULT_BOT_CONFIG;
+  });
+
+  // Simulator Bot Activity Logs
+  const [botLogs, setBotLogs] = useState<BotActivityLog[]>(() => {
+    try {
+      const saved = localStorage.getItem('quantedge_bot_logs');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {}
+    return [
+      {
+        id: 'log-init-1',
+        timestamp: Date.now() - 60000,
+        type: 'INFO',
+        symbol: 'SYSTEM',
+        message: 'Simulator Trading Bot engine initialized. Quantitative signals armed with dynamic SL, Break-Even, and TP rules.',
+      }
+    ];
+  });
+
   // Sync state to local storage
   useEffect(() => {
     try {
@@ -171,6 +221,203 @@ export function App() {
       localStorage.setItem('quantedge_alerts', JSON.stringify(alerts));
     } catch (e) {}
   }, [alerts]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('quantedge_signals', JSON.stringify(signals));
+    } catch (e) {}
+  }, [signals]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('quantedge_bot_config', JSON.stringify(botConfig));
+    } catch (e) {}
+  }, [botConfig]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('quantedge_bot_logs', JSON.stringify(botLogs.slice(0, 100)));
+    } catch (e) {}
+  }, [botLogs]);
+
+  // Autonomous Simulator Trading Bot Execution Engine
+  useEffect(() => {
+    if (!botConfig.isRunning) return;
+
+    // 1. Monitor Open Trades for Break-Even (BE), Take Profit (TP), and Stop Loss (SL)
+    setTrades(prevTrades => {
+      let tradesChanged = false;
+      const updatedTrades = prevTrades.map(trade => {
+        if (trade.status !== 'OPEN') return trade;
+
+        const ticker = tickers.find(t => t.symbol === trade.symbol);
+        if (!ticker) return trade;
+        const currentPrice = ticker.price;
+
+        // A) BREAK-EVEN (BE) TRIGGER
+        if (botConfig.autoMoveToBreakEven && trade.breakEvenPrice && !trade.isBreakEvenMoved) {
+          const reachedBe = trade.side === 'BUY' 
+            ? currentPrice >= trade.breakEvenPrice 
+            : currentPrice <= trade.breakEvenPrice;
+
+          if (reachedBe) {
+            tradesChanged = true;
+            const newSl = trade.price;
+            soundEngine.playAlert('success');
+
+            const log: BotActivityLog = {
+              id: `log-be-${Date.now()}-${trade.id}`,
+              timestamp: Date.now(),
+              type: 'BE_ACTIVATED',
+              symbol: trade.symbol,
+              message: `🛡️ BREAK-EVEN ACTIVATED on ${trade.symbol}! Market touched $${currentPrice.toLocaleString()}. Stop Loss moved to Entry $${newSl.toLocaleString()} (Trade is 100% Risk-Free!)`,
+            };
+            setBotLogs(prev => [log, ...prev.slice(0, 99)]);
+
+            if (trade.signalId) {
+              setSignals(prevSigs => prevSigs.map(s => s.id === trade.signalId ? { ...s, isBreakEvenMoved: true, status: 'BE_MOVED' } : s));
+            }
+
+            return {
+              ...trade,
+              stopLoss: newSl,
+              isBreakEvenMoved: true,
+              notes: `${trade.notes} | 🛡️ BE Triggered @ $${currentPrice.toFixed(2)}`
+            };
+          }
+        }
+
+        // B) TAKE PROFIT (TP)
+        if (trade.takeProfit) {
+          const hitTp = trade.side === 'BUY' 
+            ? currentPrice >= trade.takeProfit 
+            : currentPrice <= trade.takeProfit;
+
+          if (hitTp) {
+            tradesChanged = true;
+            const pnl = trade.side === 'BUY' 
+              ? (currentPrice - trade.price) * trade.amount 
+              : (trade.price - currentPrice) * trade.amount;
+
+            setUser(u => ({ ...u, balanceUsd: u.balanceUsd + pnl }));
+            soundEngine.playAlert('fill');
+
+            const log: BotActivityLog = {
+              id: `log-tp-${Date.now()}-${trade.id}`,
+              timestamp: Date.now(),
+              type: 'TP_HIT',
+              symbol: trade.symbol,
+              message: `🎯 TAKE PROFIT HIT for ${trade.symbol}! Closed @ $${currentPrice.toLocaleString()} with Realized P&L of +$${pnl.toFixed(2)}`,
+            };
+            setBotLogs(prev => [log, ...prev.slice(0, 99)]);
+
+            if (trade.signalId) {
+              setSignals(prevSigs => prevSigs.map(s => s.id === trade.signalId ? { ...s, status: 'TP2_HIT' } : s));
+            }
+
+            return {
+              ...trade,
+              status: 'CLOSED' as const,
+              pnl,
+              exitPrice: currentPrice,
+              notes: `${trade.notes} | 🎯 TP Hit @ $${currentPrice.toFixed(2)}`
+            };
+          }
+        }
+
+        // C) STOP LOSS (SL)
+        if (trade.stopLoss) {
+          const hitSl = trade.side === 'BUY' 
+            ? currentPrice <= trade.stopLoss 
+            : currentPrice >= trade.stopLoss;
+
+          if (hitSl) {
+            tradesChanged = true;
+            const pnl = trade.side === 'BUY' 
+              ? (currentPrice - trade.price) * trade.amount 
+              : (trade.price - currentPrice) * trade.amount;
+
+            setUser(u => ({ ...u, balanceUsd: u.balanceUsd + pnl }));
+            soundEngine.playAlert('warning');
+
+            const log: BotActivityLog = {
+              id: `log-sl-${Date.now()}-${trade.id}`,
+              timestamp: Date.now(),
+              type: 'SL_HIT',
+              symbol: trade.symbol,
+              message: `⚠️ STOP LOSS TRIGGERED for ${trade.symbol}! Closed @ $${currentPrice.toLocaleString()} (P&L: -$${Math.abs(pnl).toFixed(2)})`,
+            };
+            setBotLogs(prev => [log, ...prev.slice(0, 99)]);
+
+            if (trade.signalId) {
+              setSignals(prevSigs => prevSigs.map(s => s.id === trade.signalId ? { ...s, status: 'SL_HIT' } : s));
+            }
+
+            return {
+              ...trade,
+              status: 'CLOSED' as const,
+              pnl,
+              exitPrice: currentPrice,
+              notes: `${trade.notes} | ⚠️ SL Hit @ $${currentPrice.toFixed(2)}`
+            };
+          }
+        }
+
+        return trade;
+      });
+
+      return tradesChanged ? updatedTrades : prevTrades;
+    });
+
+    // 2. Auto-Execute Eligible Signals
+    const openBotTrades = trades.filter(t => t.status === 'OPEN' && t.isBotTrade);
+    if (openBotTrades.length < botConfig.maxOpenPositions) {
+      const eligibleSignal = signals.find(s => 
+        s.status === 'ACTIVE' && 
+        s.confluenceScore >= botConfig.minConfluence &&
+        botConfig.allowedSymbols.includes(s.symbol) &&
+        !trades.some(t => t.status === 'OPEN' && t.symbol === s.symbol)
+      );
+
+      if (eligibleSignal) {
+        const ticker = tickers.find(t => t.symbol === eligibleSignal.symbol);
+        const execPrice = ticker?.price || eligibleSignal.entryPrice;
+
+        const newBotTrade: TradeRecord = {
+          id: `bot-tr-${Date.now()}`,
+          symbol: eligibleSignal.symbol,
+          side: eligibleSignal.direction,
+          orderType: 'MARKET',
+          price: execPrice,
+          amount: botConfig.lotSize,
+          totalUsd: execPrice * botConfig.lotSize,
+          status: 'OPEN',
+          strategyTag: eligibleSignal.strategyName,
+          notes: `Bot Auto-Execution | SL: $${eligibleSignal.stopLoss} | BE: $${eligibleSignal.breakEvenPrice} | TP1: $${eligibleSignal.tp1} | TP2: $${eligibleSignal.tp2}`,
+          stopLoss: eligibleSignal.stopLoss,
+          takeProfit: eligibleSignal.tp2,
+          breakEvenPrice: eligibleSignal.breakEvenPrice,
+          isBreakEvenMoved: false,
+          isBotTrade: true,
+          signalId: eligibleSignal.id,
+          createdAt: Date.now(),
+        };
+
+        setTrades(prev => [newBotTrade, ...prev]);
+        setSignals(prev => prev.map(s => s.id === eligibleSignal.id ? { ...s, status: 'TRIGGERED' } : s));
+
+        const log: BotActivityLog = {
+          id: `log-exec-${Date.now()}`,
+          timestamp: Date.now(),
+          type: 'ORDER_PLACED',
+          symbol: eligibleSignal.symbol,
+          message: `🚀 BOT AUTO-EXECUTED: Placed ${eligibleSignal.direction} ${botConfig.lotSize} lots on ${eligibleSignal.symbol} @ $${execPrice.toLocaleString()} [${eligibleSignal.strategyName}] (SL: $${eligibleSignal.stopLoss}, BE: $${eligibleSignal.breakEvenPrice}, TP2: $${eligibleSignal.tp2})`,
+        };
+        setBotLogs(prev => [log, ...prev.slice(0, 99)]);
+        soundEngine.playAlert('fill');
+      }
+    }
+  }, [tickers, botConfig.isRunning]);
 
   // Fetch real-time market tickers from backend API periodically
   useEffect(() => {
@@ -357,6 +604,25 @@ export function App() {
                   onCloseTrade={handleCloseTrade}
                   alerts={alerts}
                   isDark={isDark}
+                  signals={signals}
+                  botConfig={botConfig}
+                  onToggleBot={() => setBotConfig(p => ({ ...p, isRunning: !p.isRunning }))}
+                />
+              )}
+              {activeTab === 'signals' && (
+                <SignalsAndBotView
+                  tickers={tickers}
+                  user={user}
+                  trades={trades}
+                  onExecuteTrade={handleAddTrade}
+                  onCloseTrade={handleCloseTrade}
+                  isDark={isDark}
+                  signals={signals}
+                  setSignals={setSignals}
+                  botConfig={botConfig}
+                  setBotConfig={setBotConfig}
+                  botLogs={botLogs}
+                  setBotLogs={setBotLogs}
                 />
               )}
               {activeTab === 'backtester' && (
@@ -439,6 +705,25 @@ export function App() {
                 onCloseTrade={handleCloseTrade}
                 alerts={alerts}
                 isDark={isDark}
+                signals={signals}
+                botConfig={botConfig}
+                onToggleBot={() => setBotConfig(p => ({ ...p, isRunning: !p.isRunning }))}
+              />
+            )}
+            {activeTab === 'signals' && (
+              <SignalsAndBotView
+                tickers={tickers}
+                user={user}
+                trades={trades}
+                onExecuteTrade={handleAddTrade}
+                onCloseTrade={handleCloseTrade}
+                isDark={isDark}
+                signals={signals}
+                setSignals={setSignals}
+                botConfig={botConfig}
+                setBotConfig={setBotConfig}
+                botLogs={botLogs}
+                setBotLogs={setBotLogs}
               />
             )}
             {activeTab === 'backtester' && (

@@ -232,6 +232,115 @@ export interface TradeRecord {
   notes: string;
   createdAt: number;
   closedAt?: number;
+  stopLoss?: number;
+  takeProfit?: number;
+  breakEvenPrice?: number;
+  isBreakEvenMoved?: boolean;
+  isBotTrade?: boolean;
+  signalId?: string;
+  partialClosed?: boolean;
+}
+
+// Signals & Automated Simulator Bot Types
+export type StrategyCategory = 'SMC_ICT' | 'BREAKOUT_ORB' | 'TREND_FOLLOWING' | 'MEAN_REVERSION' | 'ORDER_FLOW';
+
+export interface TradeSignal {
+  id: string;
+  symbol: string;
+  direction: 'BUY' | 'SELL';
+  strategyName: string;
+  strategyCategory: StrategyCategory;
+  entryPrice: number;
+  stopLoss: number;
+  stopLossPoints: number;
+  breakEvenPrice: number;
+  breakEvenPoints: number;
+  isBreakEvenMoved: boolean;
+  tp1: number;
+  tp2: number;
+  tp3: number;
+  riskRewardRatio: number;
+  confluenceScore: number; // 0 to 100
+  timeframe: string;
+  status: 'ACTIVE' | 'TRIGGERED' | 'BE_MOVED' | 'TP1_HIT' | 'TP2_HIT' | 'SL_HIT' | 'EXPIRED';
+  thesis: string;
+  catalyst: string;
+  createdAt: number;
+  autoExecutedByBot?: boolean;
+}
+
+export interface TradingStrategy {
+  id: string;
+  name: string;
+  category: StrategyCategory;
+  symbol: string;
+  description: string;
+  timeframe: string;
+  winRatePct: number;
+  profitFactor: number;
+  avgRiskReward: string;
+  keyIndicators: string[];
+  executionRules: {
+    setupCondition: string;
+    triggerEntry: string;
+    stopLossRule: string;
+    breakEvenRule: string;
+    takeProfitRule: string;
+  };
+  pineScriptSnippet: string;
+}
+
+export interface TradingBotConfig {
+  isRunning: boolean;
+  mode: 'AUTO_ALL' | 'CONFIRM_FIRST' | 'SELECTIVE';
+  allowedStrategies: StrategyCategory[];
+  allowedSymbols: string[];
+  minConfluence: number;
+  lotSize: number;
+  maxOpenPositions: number;
+  autoMoveToBreakEven: boolean;
+  partialProfitTp1: boolean;
+  trailingStopEnabled: boolean;
+}
+
+export interface BotActivityLog {
+  id: string;
+  timestamp: number;
+  type: 'SCAN' | 'SIGNAL_DETECTED' | 'ORDER_PLACED' | 'BE_ACTIVATED' | 'TP_HIT' | 'SL_HIT' | 'INFO';
+  symbol: string;
+  message: string;
+  pnl?: number;
+  signalId?: string;
+}
+
+export interface TradeAnalysisReport {
+  symbol: string;
+  strategy: string;
+  direction: 'BUY' | 'SELL';
+  currentPrice: number;
+  confluenceScore: number;
+  marketStructure: {
+    bias: 'Bullish Expansion' | 'Bearish Distribution' | 'Consolidation / Range';
+    liquiditySwept: string;
+    imbalanceFVG: string;
+    trendAlignment: string;
+  };
+  executionPlan: {
+    entryTechnique: string;
+    entryPrice: number;
+    stopLossPrice: number;
+    stopLossPips: number;
+    stopLossRationale: string;
+    breakEvenTriggerPrice: number;
+    breakEvenRationale: string;
+    tp1: number;
+    tp2: number;
+    tp3: number;
+    riskRewardRatio: number;
+  };
+  checklist: { item: string; passed: boolean }[];
+  invalidationWarning: string;
+  aiInsights?: string;
 }
 
 // User Profile & Authentication

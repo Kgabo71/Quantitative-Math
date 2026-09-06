@@ -9,7 +9,7 @@ import {
   BellRing
 } from 'lucide-react';
 
-export type TabType = 'academy' | 'simulation' | 'backtester' | 'risk' | 'journal' | 'tutor' | 'alerts';
+export type TabType = 'simulation' | 'signals' | 'academy' | 'backtester' | 'risk' | 'journal' | 'tutor' | 'alerts';
 
 interface NavigationTabsProps {
   activeTab: TabType;
@@ -26,6 +26,7 @@ export const NavigationTabs: React.FC<NavigationTabsProps> = ({
 }) => {
   const navItems: { id: TabType; label: string; icon: React.ElementType; badge?: string }[] = [
     { id: 'simulation', label: 'TradingView Terminal', icon: CandlestickChart, badge: 'US30 · NAS · Gold' },
+    { id: 'signals', label: 'Signals & Trading Bot', icon: Bot, badge: 'SL·BE·TP' },
     { id: 'academy', label: 'Quant Academy', icon: GraduationCap, badge: 'Interactive' },
     { id: 'backtester', label: 'Strategy Backtester', icon: FlaskConical },
     { id: 'risk', label: 'Risk Analytics', icon: ShieldAlert },

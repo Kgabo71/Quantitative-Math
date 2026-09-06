@@ -23,10 +23,13 @@ import {
   OrderBook, 
   TradeRecord, 
   VolatilityAlert, 
-  UserProfile 
+  UserProfile,
+  TradeSignal,
+  TradingBotConfig
 } from '../../types';
+import { Bot, ShieldCheck, Target, FileText } from 'lucide-react';
 
-export type RightDockTab = 'watchlist' | 'dom' | 'order_ticket' | 'calendar' | 'alerts';
+export type RightDockTab = 'watchlist' | 'signals' | 'dom' | 'order_ticket' | 'calendar' | 'alerts';
 
 interface TradingViewRightDockProps {
   currentTicker: MarketTicker;
@@ -36,6 +39,10 @@ interface TradingViewRightDockProps {
   user: UserProfile;
   alerts: VolatilityAlert[];
   onExecuteTrade: (trade: Omit<TradeRecord, 'id' | 'createdAt'>) => void;
+  signals?: TradeSignal[];
+  onOpenAnalyzer?: (sig: TradeSignal) => void;
+  botConfig?: TradingBotConfig;
+  onToggleBot?: () => void;
 }
 
 export const TradingViewRightDock: React.FC<TradingViewRightDockProps> = ({
@@ -46,6 +53,10 @@ export const TradingViewRightDock: React.FC<TradingViewRightDockProps> = ({
   user,
   alerts,
   onExecuteTrade,
+  signals = [],
+  onOpenAnalyzer = () => {},
+  botConfig,
+  onToggleBot = () => {},
 }) => {
   const [activeTab, setActiveTab] = useState<RightDockTab | null>('watchlist');
 
@@ -84,6 +95,7 @@ export const TradingViewRightDock: React.FC<TradingViewRightDockProps> = ({
 
   const navButtons: { id: RightDockTab; icon: React.ElementType; label: string }[] = [
     { id: 'watchlist', icon: List, label: 'Watchlist & Quotes' },
+    { id: 'signals', icon: Bot, label: 'Signals & Bot (SL·BE·TP)' },
     { id: 'order_ticket', icon: Zap, label: 'Trading Order Ticket' },
     { id: 'dom', icon: Activity, label: 'Depth of Market (DOM)' },
     { id: 'calendar', icon: Calendar, label: 'Economic Calendar' },
@@ -186,6 +198,132 @@ export const TradingViewRightDock: React.FC<TradingViewRightDockProps> = ({
                       <div className="absolute left-[62%] top-0 bottom-0 w-2 bg-white rounded-full shadow" />
                     </div>
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* SIGNALS & SIMULATOR BOT TAB */}
+            {activeTab === 'signals' && (
+              <div className="space-y-3">
+                {/* Bot Quick Toggle Header */}
+                <div className="p-2.5 rounded-lg bg-[#131722] border border-[#2a2e39] flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Bot className={`h-4 w-4 ${botConfig?.isRunning ? 'text-emerald-400' : 'text-slate-400'}`} />
+                    <div>
+                      <span className="font-bold text-xs block text-[#d1d4dc]">Trading Bot</span>
+                      <span className="text-[10px] text-[#787b86]">
+                        {botConfig?.isRunning ? 'Autonomous Running' : 'Standby'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={onToggleBot}
+                    className={`px-2.5 py-1 rounded text-[11px] font-bold font-mono transition-colors ${
+                      botConfig?.isRunning
+                        ? 'bg-amber-600/30 text-amber-300 border border-amber-500/30 hover:bg-amber-600/40'
+                        : 'bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-600/40'
+                    }`}
+                  >
+                    {botConfig?.isRunning ? 'Pause' : 'Start'}
+                  </button>
+                </div>
+
+                <div className="text-[10px] font-bold uppercase tracking-wider text-[#787b86]">
+                  Active Signals ({signals.filter(s => s.symbol === currentTicker.symbol).length || signals.length})
+                </div>
+
+                <div className="space-y-2.5">
+                  {(signals.filter(s => s.symbol === currentTicker.symbol).length > 0 
+                    ? signals.filter(s => s.symbol === currentTicker.symbol) 
+                    : signals
+                  ).map((sig) => {
+                    const isBuy = sig.direction === 'BUY';
+                    return (
+                      <div 
+                        key={sig.id}
+                        className="p-3 rounded-lg bg-[#131722] border border-[#2a2e39] space-y-2 hover:border-[#2962ff]/40 transition-colors"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-mono font-bold text-xs text-white">{sig.symbol}</span>
+                            <span className={`px-1.5 py-0.2 rounded text-[10px] font-bold ${
+                              isBuy ? 'bg-[#089981]/20 text-[#089981]' : 'bg-[#f23645]/20 text-[#f23645]'
+                            }`}>
+                              {sig.direction}
+                            </span>
+                          </div>
+                          <span className="text-[10px] font-mono font-bold text-cyan-400 bg-cyan-950/40 border border-cyan-800/40 px-1.5 py-0.5 rounded">
+                            {sig.confluenceScore}% Conf.
+                          </span>
+                        </div>
+
+                        <div className="text-[11px] text-[#787b86] line-clamp-1">{sig.strategyName}</div>
+
+                        {/* Parameter Grid */}
+                        <div className="grid grid-cols-2 gap-1.5 text-[10px] font-mono bg-black/20 p-2 rounded border border-[#2a2e39]/50">
+                          <div>
+                            <span className="text-[#787b86] block">Entry:</span>
+                            <span className="text-cyan-400 font-bold">${sig.entryPrice.toLocaleString()}</span>
+                          </div>
+                          <div>
+                            <span className="text-red-400 block">Stop Loss:</span>
+                            <span className="text-red-400 font-bold">${sig.stopLoss.toLocaleString()}</span>
+                          </div>
+                          <div>
+                            <span className="text-yellow-400 block flex items-center gap-0.5">
+                              <ShieldCheck className="h-2.5 w-2.5" /> BE Trigger:
+                            </span>
+                            <span className="text-yellow-400 font-bold">${sig.breakEvenPrice.toLocaleString()}</span>
+                          </div>
+                          <div>
+                            <span className="text-[#089981] block">Take Profit:</span>
+                            <span className="text-[#089981] font-bold">${sig.tp2.toLocaleString()}</span>
+                          </div>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex items-center gap-1.5 pt-1">
+                          <button
+                            type="button"
+                            onClick={() => onOpenAnalyzer(sig)}
+                            className="flex-1 py-1.5 rounded bg-[#1e222d] hover:bg-[#2a2e39] text-cyan-300 text-[11px] font-semibold flex items-center justify-center gap-1 border border-cyan-800/30"
+                          >
+                            <FileText className="h-3 w-3" />
+                            <span>Analyze</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              onExecuteTrade({
+                                symbol: sig.symbol,
+                                side: sig.direction,
+                                orderType: 'MARKET',
+                                price: currentTicker.price,
+                                amount: 1.0,
+                                totalUsd: currentTicker.price * 1.0,
+                                status: 'OPEN',
+                                strategyTag: sig.strategyName,
+                                notes: `Signal ${sig.id} | SL: $${sig.stopLoss} | BE: $${sig.breakEvenPrice} | TP: $${sig.tp2}`,
+                                stopLoss: sig.stopLoss,
+                                takeProfit: sig.tp2,
+                                breakEvenPrice: sig.breakEvenPrice,
+                                isBreakEvenMoved: false,
+                                isBotTrade: false,
+                                signalId: sig.id,
+                              });
+                            }}
+                            className={`px-3 py-1.5 rounded text-[11px] font-bold font-mono text-white ${
+                              isBuy ? 'bg-[#089981] hover:bg-[#089981]/90' : 'bg-[#f23645] hover:bg-[#f23645]/90'
+                            }`}
+                          >
+                            Execute
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
